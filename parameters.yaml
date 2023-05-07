@@ -1,0 +1,13 @@
+linkedin_email: "ehgp0105@gmail.com"
+linkedin_pwd: "KKAJjH8HagnUG3z"
+# linkedin_email: ${linkedin_email}
+# linkedin_pwd: ${linkedin_pwd}
+keywords: "data scientist"
+location: "Washington DC-Baltimore Area"
+# li_login: "https://www.linkedin.com/login"
+li_login: "https://www.linkedin.com/login?session_redirect=https%3A%2F%2Fwww%2Elinkedin%2Ecom%2Fcompany%2Flogin-canada&fromSignIn=true&trk=organization_guest_nav-header-signin"
+search_ezapp: "https://www.linkedin.com/jobs/search/?keywords={keywords}&location={location}&sortBy=DD&start={page}"
+search_job: "https://www.linkedin.com/jobs/search/?currentJobId={job_id}"
+xpath:
+    login_btn:  "//button[@type='submit']"
+

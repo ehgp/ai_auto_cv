@@ -66,3 +66,4 @@ Pipfile.lock
 chromedriver.exe
 **/*.dat
 **/*.html
+proxies.txt

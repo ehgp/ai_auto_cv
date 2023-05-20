@@ -9,5 +9,13 @@ li_login: "https://www.linkedin.com/login?session_redirect=https%3A%2F%2Fwww%2El
 search_ezapp: "https://www.linkedin.com/jobs/search/?keywords={keywords}&location={location}&sortBy=DD&start={page}"
 search_job: "https://www.linkedin.com/jobs/search/?currentJobId={job_id}"
 xpath:
-    login_btn:  "//button[@type='submit']"
-
+    login_btn: "//button[@type='submit']"
+    get_all_jobs: "jobs-search-results__list-item occludable-update*"
+    get_job_id: "data-occludable-job-id"
+    get_html: "return document.getElementsByTagName('html')[0].innerHTML"
+    job_post: "jobs-save-button*"
+    job_location: "jobs-unified-top-card__bullet*"
+    job_workplace_type: "jobs-unified-top-card__workplace-type"
+    job_description: "jobs-box__html-content jobs-description-content__text*"
+    job_salary: "SALARY"
+    job_hirer_info: "hirer-card__hirer-information*"

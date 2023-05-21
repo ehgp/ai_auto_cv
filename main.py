@@ -14,6 +14,7 @@ from os.path import isfile, join
 from pathlib import Path
 
 import nltk
+import pyPDF2
 import schedule
 import yaml
 from dotenv import load_dotenv
@@ -39,6 +40,13 @@ with open(log_config, "r") as log_file:
 logger = logging.getLogger(__name__)
 
 
+def collect_user_pdf():
+    """Collect User PDF."""
+    pdfReader = PyPDF2.PdfFileReader(open("resume.pdf", "rb"))
+    pageObj = pdfReader.getPage(0)
+    print(pageObj.extractText())
+
+
 def run_job_boards():
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = []
@@ -50,6 +58,8 @@ def run_job_boards():
 
 def main():
     """Main function."""
+    logger.info("Collecting User Information")
+
     logger.info("Starting Threading of Scrapers")
     # Run the requests inside a thread
     with concurrent.futures.ThreadPoolExecutor() as executor:

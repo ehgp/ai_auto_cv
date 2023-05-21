@@ -67,3 +67,4 @@ chromedriver.exe
 **/*.dat
 **/*.html
 proxies.txt
+.env

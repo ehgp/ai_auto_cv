@@ -3,6 +3,7 @@
 Selenium Job that will apply to jobs for you on LinkedIn.
 For educational purposes only, not responsible for blocked accounts.
 """
+import json
 import logging
 import logging.config
 import os
@@ -22,6 +23,7 @@ import nltk
 import pandas as pd
 import yaml
 from bs4 import BeautifulSoup
+from dotenv import load_dotenv
 from nltk.corpus import stopwords
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -38,12 +40,46 @@ nltk.download("stopwords", quiet=True)
 path = Path(os.path.dirname(os.path.abspath(__file__)))
 root_path = Path(path).parent.parent
 logger = log.setup_logger(__name__)
+load_dotenv(dotenv_path=Path(root_path, ".env"))
 
 
 def _remove_html_tags(text):
     """Remove html tags from a string."""
     clean = re.compile("<.*?>")
     return re.sub(clean, "", text)
+
+
+def extract_apply_link(code_tags):
+    """Extract the apply link from the job page."""
+    # Extract the apply link from the job page
+    try:
+        # Initialize an empty list to hold all JSON data
+        all_json_data = []
+
+        for tag in code_tags:
+            # Get the text inside the <code> tag
+            json_text = tag.string.replace("&quot;", '"')
+
+            # Parse the JSON text and append to the list
+            json_data = json.loads(json_text)
+            all_json_data.append(json_data)
+        # Iterate over each json object in the list
+        for json_data in all_json_data:
+            # Check if the required path exists in the json object
+            if (
+                "data" in json_data
+                and "applyMethod" in json_data["data"]
+                and "companyApplyUrl" in json_data["data"]["applyMethod"]
+            ):
+                # If it exists, return the companyApplyUrl
+                apply_link = json_data["data"]["applyMethod"]["companyApplyUrl"]
+
+    except Exception as e:
+        logger.error(f"Apply Link Not Found: {e}")
+        apply_link = None
+
+    # If the required path was not found in any json object, return None
+    return apply_link
 
 
 def clean_text(text):
@@ -111,7 +147,7 @@ def _load_config():
     if config_defs.values() is None:
         raise ValueError("Yaml file is empty")
 
-    if (config_defs["linkedin_email"] or config_defs["linkedin_pwd"]) is None:
+    if os.getenv("LINKEDIN_PWD") is None or os.getenv("LINKEDIN_EMAIL") is None:
         raise ValueError("Incomplete linkedin credentials")
 
     return config_defs
@@ -122,14 +158,15 @@ def store_in_db(jobs):
     con = sqlite3.connect(f"{root_path}/jobs.db")
     cur = con.cursor()
     create_table = """CREATE TABLE IF NOT EXISTS jobs \
-        (job_ids text, job_posts text, job_employers text, \
-        job_locations text, job_workplace_types text, job_salaries text, job_hirer_info text, job_descriptions text)"""
+        (job_id text, job_post text, job_employer text, \
+        job_location text, job_workplace_type text, job_type text, job_experience text, job_employee_count text, job_industry text, job_salary text, job_hirer_info text, job_apply_link text, job_description text)"""
     logger.info("Creating Table jobs")
     cur.execute(create_table)
     con.commit()
-    insert_table = "INSERT INTO jobs VALUES ( :job_id, :job_post, :job_employer, :job_location, :job_workplace_type, :job_salary, :job_hirer_info, :job_description )"
+    insert_table = "INSERT INTO jobs VALUES ( :job_id, :job_post, :job_employer, :job_location, :job_workplace_type, :job_type, :job_experience, :job_employee_count, :job_industry,  :job_salary, :job_hirer_info, :job_apply_link, :job_description )"
     for job in jobs:
         logger.info(job)
+        job["job_description"] = clean_text(job["job_description"])
         logger.info("Inserting row")
         cur.execute(insert_table, job)
     con.commit()
@@ -187,9 +224,11 @@ class SeleniumLI:
         time.sleep(random.randint(3, 5))
         self.driver.refresh()
         time.sleep(random.uniform(0.15, 0.4))
-        self.driver.find_element_by_id("username").send_keys(self.cf["linkedin_email"])
+        self.driver.find_element_by_id("username").send_keys(
+            os.getenv("LINKEDIN_EMAIL")
+        )
         time.sleep(random.uniform(0.15, 0.4))
-        self.driver.find_element_by_id("password").send_keys(self.cf["linkedin_pwd"])
+        self.driver.find_element_by_id("password").send_keys(os.getenv("LINKEDIN_PWD"))
         time.sleep(random.uniform(0.15, 0.4))
         (
             WebDriverWait(self.driver, 10)
@@ -198,20 +237,33 @@ class SeleniumLI:
             )
             .click()
         )
+        # self.driver.find_element_by_xpath(self.cf["xpath"]["login_btn"]).click()
         time.sleep(random.uniform(0.15, 0.4))
         # for i in range(0, 240, 24):
-        for i in range(0, 1):
+        for i in range(0, 4):
             self.job_ids = []
             time.sleep(random.randint(3, 5))
             self.driver.get(
-                self.cf["search_ezapp"].format(
-                    keywords=self.cf["keywords"].replace(" ", "%20"),
-                    location=self.cf["location"].replace(" ", "%20"),
+                self.cf["search"].format(
+                    keywords=self.cf["keywords"]
+                    .replace(" ", "%20")
+                    .replace("'", "%22"),
+                    location=self.cf["location"]
+                    .replace(" ", "%20")
+                    .replace("'", "%22"),
+                    job_type=self.cf["job_type"],
+                    job_experience_level=self.cf["job_experience_level"],
+                    job_workplace_type=self.cf["job_workplace_type"],
+                    job_salary_band=self.cf["job_salary_band"],
+                    job_posted_time=self.cf["job_posted_time"],
                     page=i,
                 )
             )
-            time.sleep(random.randint(5, 10))
-            content = self.driver.execute_script(self.cf['xpath']['get_html'])
+            time.sleep(random.randint(3, 5))
+            self.driver.refresh()
+            time.sleep(random.randint(3, 5))
+            content = self.driver.page_source
+            # content = self.driver.execute_script(self.cf['xpath']['get_html'])
             soup = BeautifulSoup(content, "lxml")
             _save_html_to_file(content, f"linkedin_job_main_page_{i}")
             for link in soup.findAll(
@@ -223,7 +275,8 @@ class SeleniumLI:
                 time.sleep(random.randint(3, 5))
                 self.driver.get(self.cf["search_job"].format(job_id=job_id))
                 time.sleep(random.randint(5, 10))
-                content = self.driver.execute_script(self.cf['xpath']['get_html'])
+                content = self.driver.page_source
+                # content = self.driver.execute_script(self.cf['xpath']['get_html'])
                 soup = BeautifulSoup(content, "lxml")
                 _save_html_to_file(content, f"linkedin_job_id_{job_id}")
                 logger.info(f"Job ID: {job_id}")
@@ -278,31 +331,138 @@ class SeleniumLI:
                     job_location = None
                 logger.info(f"Job Location: {job_location}")
 
-                # Job Description
+                # Job Type
                 try:
-                    job_description = clean_text(
-                        soup.find(
-                            "div",
-                            class_=re.compile(self.cf['xpath']['job_description']),
-                            recursive=True,
-                        ).get_text()
-                    )
-
+                    if (
+                        "$"
+                        in soup.find_all(
+                            "li",
+                            class_=re.compile(self.cf['xpath']['job_insight']),
+                        )[0].text
+                    ):
+                        job_type = _remove_html_tags(
+                            soup.find_all(
+                                "li",
+                                class_=re.compile(self.cf['xpath']['job_insight']),
+                            )[0]
+                            .text.replace("\n", " ")
+                            .replace("  ", "")
+                            .strip()
+                            .split(" · ")[1]
+                        )
+                    else:
+                        job_type = _remove_html_tags(
+                            soup.find_all(
+                                "li",
+                                class_=re.compile(self.cf['xpath']['job_insight']),
+                            )[0]
+                            .text.replace("\n", " ")
+                            .replace("  ", "")
+                            .strip()
+                            .split(" · ")[0]
+                        )
                 except Exception as e:
                     logger.error(e)
-                    job_description = None
-                logger.info(f"Job Description: {job_description}")
+                    job_type = None
+                logger.info(f"Job Type: {job_type}")
+
+                # Job Experience
+                try:
+                    if (
+                        "$"
+                        in soup.find_all(
+                            "li",
+                            class_=re.compile(self.cf['xpath']['job_insight']),
+                        )[0].text
+                    ):
+                        job_experience = _remove_html_tags(
+                            soup.find_all(
+                                "li",
+                                class_=re.compile(self.cf['xpath']['job_insight']),
+                            )[0]
+                            .text.replace("\n", " ")
+                            .replace("  ", "")
+                            .strip()
+                            .split(" · ")[2]
+                        )
+                    else:
+                        job_experience = _remove_html_tags(
+                            soup.find_all(
+                                "li",
+                                class_=re.compile(self.cf['xpath']['job_insight']),
+                            )[0]
+                            .text.replace("\n", " ")
+                            .replace("  ", "")
+                            .strip()
+                            .split(" · ")[1]
+                        )
+                except Exception as e:
+                    logger.error(e)
+                    job_experience = None
+                logger.info(f"Job Experience: {job_experience}")
+
+                # Job Employee Count
+                try:
+                    job_employee_count = _remove_html_tags(
+                        soup.find_all(
+                            "li",
+                            class_=re.compile(self.cf['xpath']['job_insight']),
+                        )[1]
+                        .text.replace("\n", " ")
+                        .replace("  ", "")
+                        .strip()
+                        .split(" · ")[0]
+                    )
+                except Exception as e:
+                    logger.error(e)
+                    job_employee_count = None
+                logger.info(f"Job Employee Count: {job_employee_count}")
+
+                # Job Industry
+                try:
+                    job_industry = _remove_html_tags(
+                        soup.find_all(
+                            "li",
+                            class_=re.compile(self.cf['xpath']['job_insight']),
+                        )[1]
+                        .text.replace("\n", " ")
+                        .replace("  ", "")
+                        .strip()
+                        .split(" · ")[1]
+                    )
+                except Exception as e:
+                    logger.error(e)
+                    job_industry = None
+                logger.info(f"Job Industry: {job_industry}")
 
                 # Job Salary
                 try:
-                    job_salary = (
-                        soup.find(
-                            "div",
-                            id_=re.compile(self.cf['xpath']['job_salary']),
+                    if (
+                        "$"
+                        in soup.find_all(
+                            "li",
+                            class_=re.compile(self.cf['xpath']['job_insight']),
+                        )[0].text
+                    ):
+                        job_salary = _remove_html_tags(
+                            soup.find_all(
+                                "li",
+                                class_=re.compile(self.cf['xpath']['job_insight']),
+                            )[0]
+                            .text.replace("\n", " ")
+                            .replace("  ", "")
+                            .strip()
+                            .split(" · ")[0]
                         )
-                        .text.replace("\n", "")
-                        .replace("  ", "")
-                    )
+                    else:
+                        job_salary = (
+                            soup.find(
+                                "div",
+                                id_=re.compile(self.cf['xpath']['job_salary']),
+                            )
+                            .text.replace("\n", "")
+                            .replace("  ", "")
+                        )
                 except Exception as e:
                     logger.error(e)
                     try:
@@ -345,6 +505,31 @@ class SeleniumLI:
                     job_hirer_info = None
                 logger.info(f"Job Hirer Info: {job_hirer_info}")
 
+                # Job Apply Link
+                try:
+                    job_apply_link = extract_apply_link(
+                        soup.find_all(
+                            "code", id=re.compile(self.cf['xpath']['job_apply_link'])
+                        )
+                    )
+                except Exception as e:
+                    logger.error(e)
+                    job_apply_link = None
+                logger.info(f"Job Apply Link: {job_apply_link}")
+
+                # Job Description
+                try:
+                    job_description = soup.find(
+                        "div",
+                        class_=re.compile(self.cf['xpath']['job_description']),
+                        recursive=True,
+                    ).get_text()
+
+                except Exception as e:
+                    logger.error(e)
+                    job_description = None
+                logger.info(f"Job Description: {job_description}")
+
                 jobs.append(
                     {
                         "job_id": job_id,
@@ -352,8 +537,13 @@ class SeleniumLI:
                         "job_employer": job_employer,
                         "job_location": job_location,
                         "job_workplace_type": job_workplace_type,
+                        "job_type": job_type,
+                        "job_experience": job_experience,
+                        "job_employee_count": job_employee_count,
+                        "job_industry": job_industry,
                         "job_salary": job_salary,
                         "job_hirer_info": job_hirer_info,
+                        "job_apply_link": job_apply_link,
                         "job_description": job_description,
                     }
                 )
@@ -408,37 +598,143 @@ def test_ez(path: str):
             .replace("  ", "")
             .strip()
         )
-
     except Exception as e:
         logger.error(e)
         job_location = None
     logger.info(f"Job Location: {job_location}")
 
-    # Job Description
+    # Job Type
     try:
-        job_description = clean_text(
-            soup.find(
-                "div",
-                class_=re.compile(cf['xpath']['job_description']),
-                recursive=True,
-            ).get_text()
-        )
-
+        if (
+            "$"
+            in soup.find_all(
+                "li",
+                class_=re.compile(cf['xpath']['job_insight']),
+            )[0].text
+        ):
+            job_type = _remove_html_tags(
+                soup.find_all(
+                    "li",
+                    class_=re.compile(cf['xpath']['job_insight']),
+                )[0]
+                .text.replace("\n", " ")
+                .replace("  ", "")
+                .strip()
+                .split(" · ")[1]
+            )
+        else:
+            job_type = _remove_html_tags(
+                soup.find_all(
+                    "li",
+                    class_=re.compile(cf['xpath']['job_insight']),
+                )[0]
+                .text.replace("\n", " ")
+                .replace("  ", "")
+                .strip()
+                .split(" · ")[0]
+            )
     except Exception as e:
         logger.error(e)
-        job_description = None
-    logger.info(f"Job Description: {job_description}")
+        job_type = None
+    logger.info(f"Job Type: {job_type}")
+
+    # Job Experience
+    try:
+        if (
+            "$"
+            in soup.find_all(
+                "li",
+                class_=re.compile(cf['xpath']['job_insight']),
+            )[0].text
+        ):
+            job_experience = _remove_html_tags(
+                soup.find_all(
+                    "li",
+                    class_=re.compile(cf['xpath']['job_insight']),
+                )[0]
+                .text.replace("\n", " ")
+                .replace("  ", "")
+                .strip()
+                .split(" · ")[2]
+            )
+        else:
+            job_experience = _remove_html_tags(
+                soup.find_all(
+                    "li",
+                    class_=re.compile(cf['xpath']['job_insight']),
+                )[0]
+                .text.replace("\n", " ")
+                .replace("  ", "")
+                .strip()
+                .split(" · ")[1]
+            )
+    except Exception as e:
+        logger.error(e)
+        job_experience = None
+    logger.info(f"Job Experience: {job_experience}")
+
+    # Job Employee Count
+    try:
+        job_employee_count = _remove_html_tags(
+            soup.find_all(
+                "li",
+                class_=re.compile(cf['xpath']['job_insight']),
+            )[1]
+            .text.replace("\n", " ")
+            .replace("  ", "")
+            .strip()
+            .split(" · ")[0]
+        )
+    except Exception as e:
+        logger.error(e)
+        job_employee_count = None
+    logger.info(f"Job Employee Count: {job_employee_count}")
+
+    # Job Industry
+    try:
+        job_industry = _remove_html_tags(
+            soup.find_all(
+                "li",
+                class_=re.compile(cf['xpath']['job_insight']),
+            )[1]
+            .text.replace("\n", " ")
+            .replace("  ", "")
+            .strip()
+            .split(" · ")[1]
+        )
+    except Exception as e:
+        logger.error(e)
+        job_industry = None
+    logger.info(f"Job Industry: {job_industry}")
 
     # Job Salary
     try:
-        job_salary = (
-            soup.find(
-                "div",
-                id_=re.compile(cf['xpath']['job_salary']),
+        if (
+            "$"
+            in soup.find_all(
+                "li",
+                class_=re.compile(cf['xpath']['job_insight']),
+            )[0].text
+        ):
+            job_salary = _remove_html_tags(
+                soup.find_all(
+                    "li",
+                    class_=re.compile(cf['xpath']['job_insight']),
+                )[0]
+                .text.replace("\n", " ")
+                .replace("  ", "")
+                .strip()
+                .split(" · ")[0]
             )
-            .text.replace("\n", "")
-            .replace("  ", "")
-        )
+        else:
+            job_salary = (
+                soup.find(
+                    "div",
+                    id_=re.compile(cf['xpath']['job_salary']),
+                )
+                .text.replace("\n", "")
+                .replace("  ", "")
+            )
     except Exception as e:
         logger.error(e)
         try:
@@ -479,10 +775,33 @@ def test_ez(path: str):
         job_hirer_info = None
     logger.info(f"Job Hirer Info: {job_hirer_info}")
 
+    # Job Apply Link
+    try:
+        job_apply_link = extract_apply_link(
+            soup.find_all("code", id=re.compile(cf['xpath']['job_apply_link']))
+        )
+    except Exception as e:
+        logger.error(e)
+        job_apply_link = None
+    logger.info(f"Job Apply Link: {job_apply_link}")
+
+    # Job Description
+    try:
+        job_description = soup.find(
+            "div",
+            class_=re.compile(cf['xpath']['job_description']),
+            recursive=True,
+        ).get_text()
+
+    except Exception as e:
+        logger.error(e)
+        job_description = None
+    logger.info(f"Job Description: {job_description}")
+
 
 def scrape_linkedin():
     """Scrape LinkedIn for jobs."""
-    test_ez(f"{root_path}/responses/linkedin/job/linkedin_job_id_3612931486.html")
+    test_ez(f"{root_path}/responses/linkedin/job/linkedin_job_id_3609884453.html")
     # jobs = []
     # sli = SeleniumLI()
     # jobs = sli.scrape_ez(jobs)

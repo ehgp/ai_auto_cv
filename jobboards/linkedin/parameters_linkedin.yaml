@@ -1,21 +1,28 @@
-linkedin_email: "ehgp0105@gmail.com"
-linkedin_pwd: "KKAJjH8HagnUG3z"
-# linkedin_email: ${linkedin_email}
-# linkedin_pwd: ${linkedin_pwd}
-keywords: "data scientist"
+# Linked In Parameters
+keywords: "data scientist OR machine learning engineer OR data engineer OR senior NOT 'clearance' NOT 'active ts' NOT 'public trust' NOT 'federal' NOT 'cleared' NOT 'ts' NOT 'ts/sci' NOT 'active top' NOT 'randstad' NOT 'harnham' NOT 'lumicity' NOT 'Jobot' NOT 'Dice' NOT 'Edward Jones' NOT 'CyberCoders'"
 location: "Washington DC-Baltimore Area"
+job_type: "F" # Full-time
+job_experience_level: "4" # Mid-Senior
+job_workplace_type: "2" # Remote
+job_salary_band: "6" # 140,000+
+job_posted_time: "r604800" # Posted in the last week
 # li_login: "https://www.linkedin.com/login"
 li_login: "https://www.linkedin.com/login?session_redirect=https%3A%2F%2Fwww%2Elinkedin%2Ecom%2Fcompany%2Flogin-canada&fromSignIn=true&trk=organization_guest_nav-header-signin"
-search_ezapp: "https://www.linkedin.com/jobs/search/?keywords={keywords}&location={location}&sortBy=DD&start={page}"
-search_job: "https://www.linkedin.com/jobs/search/?currentJobId={job_id}"
+search: "https://www.linkedin.com/jobs/search/?keywords={keywords}&location={location}&sortBy=R&f_E={job_experience_level}&f_JT={job_type}&f_WT={job_workplace_type}&f_SB2={job_salary_band}&f_TPR={job_posted_time}&start={page}"
+search_job: "https://www.linkedin.com/jobs/view/{job_id}/?"
 xpath:
-    login_btn: "//button[@type='submit']"
+    # login_btn: "//button[@type=submit]"
+    login_btn: "//*[@id='organic-div']/form/div[3]/button"
     get_all_jobs: "jobs-search-results__list-item occludable-update*"
     get_job_id: "data-occludable-job-id"
-    get_html: "return document.getElementsByTagName('html')[0].innerHTML"
+    # get_html: "return document.getElementsByTagName(html)[0].innerHTML"
+    # Tags that get individual job info
     job_post: "jobs-save-button*"
+    # job_company_name: "jobs-unified-top-card__company-name"
     job_location: "jobs-unified-top-card__bullet*"
+    job_insight: "jobs-unified-top-card__job-insight"
     job_workplace_type: "jobs-unified-top-card__workplace-type"
     job_description: "jobs-box__html-content jobs-description-content__text*"
     job_salary: "SALARY"
     job_hirer_info: "hirer-card__hirer-information*"
+    job_apply_link: "bpr-guid-*"

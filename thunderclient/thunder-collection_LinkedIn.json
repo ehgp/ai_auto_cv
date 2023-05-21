@@ -1,0 +1,126 @@
+{
+  "client": "Thunder Client",
+  "collectionName": "LinkedIn",
+  "dateExported": "2023-05-21T01:51:13.621Z",
+  "version": "1.1",
+  "folders": [],
+  "requests": [
+    {
+      "_id": "97402fac-ec1f-49dd-86dc-2f09d5141aa9",
+      "colId": "b2bcd8d3-0732-4277-a169-9f96e71d8a7b",
+      "containerId": "",
+      "name": "Auth LinkedIn",
+      "url": "https://www.linkedin.com/uas/authenticate",
+      "method": "GET",
+      "sortNum": 20000,
+      "created": "2023-05-21T01:49:13.273Z",
+      "modified": "2023-05-21T01:49:13.273Z",
+      "headers": [
+        {
+          "name": "X-Li-User-Agent",
+          "value": "LIAuthLibrary:3.2.4 com.linkedin.LinkedIn:8.8.1 iPhone:8.3"
+        },
+        {
+          "name": "User-Agent",
+          "value": "LinkedIn/8.8.1 CFNetwork/711.3.18 Darwin/14.0.0"
+        },
+        {
+          "name": "X-User-Language",
+          "value": "en"
+        },
+        {
+          "name": "X-User-Locale",
+          "value": "en_US"
+        },
+        {
+          "name": "Accept-Language",
+          "value": "en-us"
+        }
+      ],
+      "params": [],
+      "tests": []
+    },
+    {
+      "_id": "b3afffb1-e6ce-448e-83db-fa91f74a1eee",
+      "colId": "b2bcd8d3-0732-4277-a169-9f96e71d8a7b",
+      "containerId": "",
+      "name": "Auth LinkedIn Post",
+      "url": "https://www.linkedin.com/uas/authenticate",
+      "method": "POST",
+      "sortNum": 30000,
+      "created": "2023-05-21T01:49:20.875Z",
+      "modified": "2023-05-21T01:50:13.839Z",
+      "headers": [
+        {
+          "name": "X-Li-User-Agent",
+          "value": "LIAuthLibrary:3.2.4 com.linkedin.LinkedIn:8.8.1 iPhone:8.3"
+        },
+        {
+          "name": "User-Agent",
+          "value": "LinkedIn/8.8.1 CFNetwork/711.3.18 Darwin/14.0.0"
+        },
+        {
+          "name": "X-User-Language",
+          "value": "en"
+        },
+        {
+          "name": "X-User-Locale",
+          "value": "en_US"
+        },
+        {
+          "name": "Accept-Language",
+          "value": "en-us"
+        }
+      ],
+      "params": [],
+      "body": {
+        "type": "formencoded",
+        "raw": "",
+        "form": [
+          {
+            "name": "session_key",
+            "value": ""
+          },
+          {
+            "name": "session_password",
+            "value": ""
+          }
+        ]
+      },
+      "tests": []
+    },
+    {
+      "_id": "8b1bf5c0-51ff-4b84-a657-6ef006d88768",
+      "colId": "b2bcd8d3-0732-4277-a169-9f96e71d8a7b",
+      "containerId": "",
+      "name": "Query Job Posting",
+      "url": "https://linkedin.com/voyager/api/jobs/jobPostings/3611857176?decorationId\\u003Dcom.linkedin.voyager.deco.jobs.web.shared.WebLightJobPosting-23\\u0026",
+      "method": "GET",
+      "sortNum": 40000,
+      "created": "2023-05-21T01:49:25.008Z",
+      "modified": "2023-05-21T01:49:25.008Z",
+      "headers": [
+        {
+          "name": "User-Agent",
+          "value": " Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36"
+        },
+        {
+          "name": "x-li-lang",
+          "value": "en_US"
+        },
+        {
+          "name": "x-restli-protocol-version",
+          "value": "2.0.0"
+        }
+      ],
+      "params": [
+        {
+          "name": "decorationId\\u003Dcom.linkedin.voyager.deco.jobs.web.shared.WebLightJobPosting-23\\u0026",
+          "value": "",
+          "isPath": false
+        }
+      ],
+      "tests": []
+    }
+  ]
+}
